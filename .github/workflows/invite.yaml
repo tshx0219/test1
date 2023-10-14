@@ -1,0 +1,34 @@
+name: Invite Collaborators
+
+on:
+  workflow_dispatch:
+
+env:
+  OWNER: devops-advanced-camp
+  REPO: code
+  TOKEN: ${{ secrets.PAT }}
+
+jobs:
+  invite_collaborators:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Read students.txt
+        run: |
+          while IFS= read -r line; do
+            if [ -z "$line" ]; then
+              continue
+            fi
+            username=$(echo $line | awk '{print $NF}')
+            response=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" https://api.github.com/repos/$OWNER/$REPO/collaborators/$username)
+            if [ $response -eq 204 ]; then
+              echo "User $username is already a collaborator. Exiting."
+              exit 0
+            else
+              echo "Inviting user $username to be a collaborator."
+              curl -X PUT -H "Authorization: Bearer $TOKEN" https://api.github.com/repos/$OWNER/$REPO/collaborators/$username
+            fi
+          done < students.txt
